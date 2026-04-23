@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Задание 2: Гирлянда Луни</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        .luni-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 1rem;
+        }
+        .float-anim {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .light-bulb {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .light-bulb::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            width: 12px;
+            height: 10px;
+            background: #4b5563;
+            border-radius: 2px;
+        }
+        .glow-blue { background-color: #3b82f6; box-shadow: 0 0 20px #3b82f6, inset 0 0 10px rgba(255,255,255,0.5); }
+        .glow-red { background-color: #ef4444; box-shadow: 0 0 20px #ef4444, inset 0 0 10px rgba(255,255,255,0.5); }
+        .glow-yellow { background-color: #eab308; box-shadow: 0 0 20px #eab308, inset 0 0 10px rgba(255,255,255,0.5); }
+        .glow-green { background-color: #22c55e; box-shadow: 0 0 20px #22c55e, inset 0 0 10px rgba(255,255,255,0.5); }
+        
+        .wire {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: #374151;
+            z-index: -1;
+        }
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: #1e1b4b;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4b5563;
+            transition: all 0.3s;
+        }
+        .progress-dot.active {
+            background: #fbbf24;
+            box-shadow: 0 0 10px #fbbf24;
+            transform: scale(1.3);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-6">
+
+    <div id="start-screen" class="overlay">
+        <div class="mb-6 w-40 h-40">
+            <img src="2.png" alt="Луни" class="luni-avatar" onerror="this.src='https://via.placeholder.com/150?text=Луни'">
+        </div>
+        <h2 class="text-2xl font-black mb-2 text-center px-6">Гирлянда для Мамы</h2>
+        <p class="text-indigo-300 mb-8 text-center px-10">Помоги Луни исправить все узоры!</p>
+        <button onclick="startGame()" class="bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-4 px-12 rounded-2xl text-xl shadow-lg active:scale-95 transition">Начать игру</button>
+    </div>
+
+    <div class="max-w-4xl mx-auto w-full flex items-center justify-between mb-4">
+        <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+                <span id="level-label" class="text-xs font-black uppercase tracking-widest text-indigo-400">Уровень 1/3</span>
+                <div class="flex gap-2" id="progress-container">
+                    <div class="progress-dot active"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                </div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20">
+                <p id="task-text" class="text-sm md:text-base font-bold leading-tight">Найди лишнюю лампочку в узоре!</p>
+            </div>
+        </div>
+        <!-- Убрали onclick="playAudio()" для исключения повторных звуков -->
+        <div class="w-20 h-20 md:w-28 md:h-28 float-anim ml-4">
+            <img src="2.png" alt="Луни" class="luni-avatar">
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col items-center justify-center">
+        <div class="relative w-full max-w-3xl py-16 px-6 flex justify-between items-center bg-black/20 rounded-3xl border border-white/5">
+            <div class="wire"></div>
+            <div id="lights-row" class="flex justify-between w-full relative z-10 gap-2"></div>
+        </div>
+        
+        <div class="mt-8 text-center">
+            <div id="hint-box" class="bg-indigo-900/50 px-6 py-2 rounded-full border border-indigo-500/30">
+                <span id="hint-text" class="text-indigo-200 font-bold">Узор: ...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-modal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 p-6">
+        <div class="bg-indigo-900 border-2 border-indigo-400 rounded-3xl p-8 max-w-xs w-full text-center shadow-2xl">
+            <div id="modal-icon" class="text-6xl mb-4">🏮</div>
+            <h2 id="modal-title" class="text-2xl font-black text-white mb-2">Отлично!</h2>
+            <p id="modal-desc" class="text-indigo-200 mb-6">Следующий уровень будет сложнее.</p>
+            <button id="modal-btn" onclick="nextLevel()" class="bg-indigo-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-indigo-400 w-full">Дальше</button>
+        </div>
+    </div>
+
+    <script>
+        const AUDIO_FILE_NAME = '1.mp3';
+        let currentLevel = 0;
+
+        const levels = [
+            {
+                pattern: ['blue', 'blue', 'red', 'blue', 'red', 'red'], 
+                correctColor: 'blue',
+                wrongIndex: 4,
+                hint: "Синий → Синий → Красный",
+                task: "Уровень 1: Простой повтор (A-A-B)"
+            },
+            {
+                pattern: ['yellow', 'green', 'yellow', 'yellow', 'yellow', 'green'], 
+                correctColor: 'green',
+                wrongIndex: 3,
+                hint: "Жёлтый → Зелёный → Жёлтый → Зелёный",
+                task: "Уровень 2: Чередование (A-B-A-B)"
+            },
+            {
+                pattern: ['red', 'blue', 'green', 'red', 'blue', 'blue'], 
+                correctColor: 'green',
+                wrongIndex: 5,
+                hint: "Красный → Синий → Зелёный",
+                task: "Уровень 3: Тройной узор (A-B-C)"
+            }
+        ];
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            
+            // Воспроизведение звука ТОЛЬКО 1 раз в начале игры
+            const startAudio = new Audio(AUDIO_FILE_NAME);
+            startAudio.play().catch(e => console.log("Audio play blocked by browser"));
+            
+            loadLevel();
+        }
+
+        function loadLevel() {
+            const lv = levels[currentLevel];
+            document.getElementById('level-label').innerText = `Уровень ${currentLevel + 1}/3`;
+            document.getElementById('task-text').innerText = lv.task;
+            document.getElementById('hint-text').innerText = `Узор: ${lv.hint}`;
+            
+            const dots = document.querySelectorAll('.progress-dot');
+            dots.forEach((d, i) => d.classList.toggle('active', i === currentLevel));
+            
+            renderLights(lv);
+        }
+
+        function renderLights(lv) {
+            const row = document.getElementById('lights-row');
+            row.innerHTML = '';
+            
+            lv.pattern.forEach((color, index) => {
+                const bulb = document.createElement('div');
+                bulb.className = `light-bulb glow-${color}`;
+                bulb.onclick = () => checkBulb(index, bulb, lv);
+                
+                bulb.style.opacity = '0';
+                bulb.style.transform = 'scale(0)';
+                row.appendChild(bulb);
+                
+                setTimeout(() => {
+                    bulb.style.opacity = '1'; bulb.style.transform = 'scale(1)';
+                }, index * 100);
+            });
+        }
+
+        function checkBulb(index, element, lv) {
+            if (index === lv.wrongIndex) {
+                const oldColorClass = Array.from(element.classList).find(c => c.startsWith('glow-'));
+                element.classList.remove(oldColorClass);
+                element.classList.add(`glow-${lv.correctColor}`, 'scale-125');
+                
+                createParticles(element, lv.correctColor);
+
+                setTimeout(() => {
+                    showModal();
+                }, 800);
+            } else {
+                element.animate([
+                    { transform: 'translateX(0)' },
+                    { transform: 'translateX(5px)' },
+                    { transform: 'translateX(-5px)' },
+                    { transform: 'translateX(0)' }
+                ], { duration: 200 });
+            }
+        }
+
+        function showModal() {
+            const modal = document.getElementById('success-modal');
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const btn = document.getElementById('modal-btn');
+
+            if (currentLevel < levels.length - 1) {
+                title.innerText = "Верно!";
+                desc.innerText = "Ты отлично справляешься. Давай следующий узор!";
+                btn.innerText = "Дальше";
+            } else {
+                title.innerText = "Победа!";
+                desc.innerText = "Все гирлянды исправлены! Луни и Мама счастливы.";
+                btn.innerText = "Заново";
+                document.getElementById('modal-icon').innerText = "🏆";
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function nextLevel() {
+            document.getElementById('success-modal').classList.add('hidden');
+            if (currentLevel < levels.length - 1) {
+                currentLevel++;
+                loadLevel();
+            } else {
+                currentLevel = 0;
+                loadLevel();
+            }
+        }
+
+        function createParticles(el, color) {
+            const rect = el.getBoundingClientRect();
+            const colors = { blue: '#60a5fa', red: '#f87171', yellow: '#fbbf24', green: '#4ade80' };
+            for (let i = 0; i < 12; i++) {
+                const p = document.createElement('div');
+                p.style.position = 'fixed';
+                p.style.left = (rect.left + rect.width/2) + 'px';
+                p.style.top = (rect.top + rect.height/2) + 'px';
+                p.style.width = '6px'; p.style.height = '6px';
+                p.style.backgroundColor = colors[color] || 'white';
+                p.style.borderRadius = '50%';
+                p.style.zIndex = '1000';
+                document.body.appendChild(p);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 40 + Math.random() * 60;
+                p.animate([
+                    { transform: 'translate(0, 0)', opacity: 1 },
+                    { transform: `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`, opacity: 0 }
+                ], { duration: 800, easing: 'ease-out' }).onfinish = () => p.remove();
+            }
+        }
+    </script>
+</body>
+</html>
